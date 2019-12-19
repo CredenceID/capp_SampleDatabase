@@ -256,6 +256,15 @@ class DatabaseActivity : AppCompatActivity() {
             }
         }
 
+        verifyBtn.setOnClickListener {
+            log("Verifying USER_ONE against user with ID $lastEnrolledID")
+            App.BioManager!!.verify(lastEnrolledID, compareFPRecords[USER_ONE], null, null)
+            { status, matchItem ->
+                log("[Status: $status, FP: ${matchItem.fingerprintScore}," +
+                        "Face: ${matchItem.faceScore}, Iris: ${matchItem.irisScore}]")
+            }
+        }
+
         deleteBtn.setOnClickListener {
             log("Deleting user with ID $lastEnrolledID")
             App.BioManager!!.delete(lastEnrolledID) { status -> log("[Status: $status]") }
