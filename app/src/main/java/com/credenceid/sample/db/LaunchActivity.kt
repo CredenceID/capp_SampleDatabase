@@ -21,7 +21,7 @@ class LaunchActivity : Activity() {
     private fun initBiometrics() {
 
         /*  Create new biometrics object. */
-        App.BioManager = BiometricsManager(this)
+        App.BioManager = BiometricsManager(applicationContext)
 
         /* Initialize object, meaning tell CredenceService to bind to this application. */
         App.BioManager!!.initializeBiometrics { resultCode: Biometrics.ResultCode,
