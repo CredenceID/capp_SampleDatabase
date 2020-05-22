@@ -220,7 +220,7 @@ class DatabaseActivity : AppCompatActivity() {
 
         enrollUserOneBtn.setOnClickListener {
             log("Enrolling user ONE.")
-            App.BioManager!!.enroll(10, enrollFPRecords[USER_ONE][0], null, null) { status, id ->
+            App.BioManager!!.enroll(10, enrollFPRecords[USER_ONE], null, null) { status, id ->
                 log("[Status: $status, ID: $id]")
                 if (Status.SUCCESS == status) lastEnrolledID = id
             }
