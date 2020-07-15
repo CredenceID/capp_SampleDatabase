@@ -5,10 +5,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.credenceid.database.BiometricDatabase.Status
+import com.credenceid.database.FaceRecord
 import com.credenceid.database.FingerprintRecord
 import com.credenceid.database.FingerprintRecord.Position
+import com.util.BitmapUtils
 import kotlinx.android.synthetic.main.act_main.*
 import java.io.IOException
 
@@ -19,8 +22,11 @@ private const val USER_TWO = 1
 
 class DatabaseActivity : AppCompatActivity() {
 
+    private lateinit var faceRecordOne: FaceRecord
+    private lateinit var faceRecordTwo: FaceRecord
     private var enrollFPRecords: Array<Array<FingerprintRecord?>> = arrayOf()
     private var compareFPRecords: Array<Array<FingerprintRecord?>> = arrayOf()
+    private var faceRecords: Array<FaceRecord?> = arrayOf()
     private var lastEnrolledID = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,8 +36,10 @@ class DatabaseActivity : AppCompatActivity() {
 
         this.initValues()
         this.loadEnrollRecordS()
+        this.loadEnrollFaceRecords()
         this.loadCompareRecords()
         this.configureLayoutComponents()
+        //this.enrollAllUsersFP()
     }
 
     private fun initValues() {
@@ -43,7 +51,31 @@ class DatabaseActivity : AppCompatActivity() {
         compareFPRecords += Array<FingerprintRecord?>(10) { null }
         compareFPRecords += Array<FingerprintRecord?>(10) { null }
 
+        //enrollAllFPRecords += Array<FingerprintRecord?>(100) { null }
+
+        faceRecords = Array<FaceRecord?>(7){null}
+
         logBox.movementMethod = ScrollingMovementMethod()
+    }
+
+    private fun loadEnrollFaceRecords(){
+
+        /*for (index in 1..faceRecords.size) {
+            faceRecords[index-1] = FaceRecord(
+                this.getBitmapFromAsset(
+                    this,
+                    "faceImages/face_record_$index.jpg"
+                )
+            )
+        }*/
+        faceRecordOne = FaceRecord(this.getBitmapFromAsset(
+            this,
+            "faceImages/face_record_1.jpg"
+        ))
+        faceRecordTwo = FaceRecord(this.getBitmapFromAsset(
+            this,
+            "faceImages/face_record_1.jpg"
+        ))
     }
 
     private fun loadEnrollRecordS() {
@@ -219,17 +251,28 @@ class DatabaseActivity : AppCompatActivity() {
     private fun configureLayoutComponents() {
 
         enrollUserOneBtn.setOnClickListener {
-            log("Enrolling user ONE.")
-            App.BioManager!!.enroll(10, enrollFPRecords[USER_ONE], null, null) { status, id ->
+            log("Enrolling user ONE. : $faceRecordOne")
+            App.BioManager!!.enroll(10, enrollFPRecords[USER_ONE], faceRecordOne, null) { status, id ->
                 log("[Status: $status, ID: $id]")
                 if (Status.SUCCESS == status) lastEnrolledID = id
             }
         }
         enrollUserTwoBtn.setOnClickListener {
-            log("Enrolling user TWO.")
-            App.BioManager!!.enroll(20, enrollFPRecords[USER_TWO], null, null) { status, id ->
+            log("Enrolling user TWO. : $faceRecordTwo")
+            App.BioManager!!.enroll(20, enrollFPRecords[USER_TWO], faceRecordTwo, null) { status, id ->
                 log("[Status: $status, ID: $id]")
                 if (Status.SUCCESS == status) lastEnrolledID = id
+            }
+
+        }
+
+        enrollAllBtn.setOnClickListener {
+            log("Enrolling all users.")
+            for (index in 1..50) {
+                App.BioManager!!.enroll(index, enrollAllFPRecords[index-1], null, null) { status, id ->
+                    log("[Status: $status, ID: $id]")
+                    if (Status.SUCCESS == status) lastEnrolledID = id
+                }
             }
         }
 
@@ -245,7 +288,7 @@ class DatabaseActivity : AppCompatActivity() {
 
         matchUserBtn.setOnClickListener {
             log("Matching USER_ONE against DB.")
-            App.BioManager!!.match(compareFPRecords[USER_ONE], null, null) { status, arrayList ->
+            App.BioManager!!.match(compareFPRecords[USER_TWO], faceRecordTwo, null) { status, arrayList ->
                 log("[Status: $status, Match Count: ${arrayList?.size}]")
 
                 if (null == arrayList) return@match
@@ -257,8 +300,8 @@ class DatabaseActivity : AppCompatActivity() {
         }
 
         verifyBtn.setOnClickListener {
-            log("Verifying USER_ONE against user with ID $lastEnrolledID")
-            App.BioManager!!.verify(lastEnrolledID, compareFPRecords[USER_ONE], null, null)
+            log("Verifying USER_ONE against user with ID 1")
+            App.BioManager!!.verify(10, compareFPRecords[USER_ONE], faceRecordOne, null)
             { status, matchItem ->
                 log("[Status: $status, FP: ${matchItem.fingerprintScore}," +
                         "Face: ${matchItem.faceScore}, Iris: ${matchItem.irisScore}]")
@@ -279,6 +322,25 @@ class DatabaseActivity : AppCompatActivity() {
             BitmapFactory.decodeStream(context.assets.open(filePath!!))
         } catch (ignore: IOException) {
             null
+        }
+    }
+
+    private var enrollAllFPRecords: Array<Array<FingerprintRecord?>> = arrayOf()
+    private val fingerArray = arrayOf("RT","RI","RM","RR","RL","LT", "LI","LM","LR","LL")
+
+    private fun enrollAllUsersFP(){
+        for (userIndex in 1..50){
+            enrollAllFPRecords += Array<FingerprintRecord?>(10){null}
+            val userIndexVal = if(userIndex < 10) "0${userIndex}" else "$userIndex"
+            for (fingerIndex in 0..9){
+                val filePath = "enrollAllImages/10000000000000${userIndexVal}_${fingerArray[fingerIndex]}.wsq.bmp"
+                Log.d(TAG, "File Path :$filePath")
+                Log.d(TAG, "Userindex :${userIndex-1} and fingerIndex :$fingerIndex");
+                enrollAllFPRecords[userIndex-1][fingerIndex] = FingerprintRecord(
+                    Position.valueOf(fingerIndex),
+                    this.getBitmapFromAsset(this, filePath)
+                )
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">capp_SampleDatabase</string>
+    <string name="app_name">C-SampleDatabase</string>
     <string name="bio_init">Biometrics initialized.</string>
     <string name="bio_init_fail">Biometrics FAILED to initialize.</string>
 </resources>
