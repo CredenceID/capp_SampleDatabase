@@ -132,7 +132,7 @@ class DatabaseActivity : AppCompatActivity() {
             counter = 0
             for ((i,iD) in randomEnrollList.withIndex()) {
                 Logger.getLogger(DatabaseActivity::class.java.name).info("$i $iD enrolled to biometric ")
-                App.BioManager!!.enroll(-1, enrollFPRecords[i], enrollFaceRecords[i], null) { status, id ->
+                App.BioManager!!.enroll(iD.toInt(), enrollFPRecords[i], enrollFaceRecords[i], null) { status, id ->
                     log("[Status: $status, ID: $id]")
                     counter = counter!!.inc()
                     if (counter == randomEnrollList.size){
