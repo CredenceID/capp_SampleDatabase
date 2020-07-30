@@ -5,18 +5,15 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.credenceid.database.FaceRecord
 import com.credenceid.database.FingerprintRecord
 import com.credenceid.database.FingerprintRecord.Position
 import kotlinx.android.synthetic.main.act_main.*
 import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 import java.util.logging.Logger
 import java.util.Calendar
@@ -49,8 +46,9 @@ class DatabaseActivity : AppCompatActivity() {
     private var compareList : List<String> = listOf()
     private var usersEditText : EditText? = null
     private var numberUser : Int? = null
-
     private val SDCARD_PATH : String = "${android.os.Environment.getExternalStorageDirectory()}/";
+
+    private val READFROMSDCARD = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -63,15 +61,44 @@ class DatabaseActivity : AppCompatActivity() {
 
     }
 
-    private fun getTotalUser() {this.numberUser = assets.list("EnrollBMPImages")?.size}
+    private fun getTotalUser() {
+        try {
+            if (READFROMSDCARD) {
+                this.numberUser = File(getStoragePath() + "EnrollBMPImages").list().size
+                var c = File(getStoragePath() + "CompareBMPImages").list().size
+            } else {
+                this.numberUser = assets.list("EnrollBMPImages")?.size
+                var c = assets.list("CompareBMPImages")?.size
+            }
+            log("Data Found!")
+        } catch (ignore: IOException){
+            log("Data not found!")
+            enrollOneBtn.visibility = View.GONE
+            enrollAllBtn.visibility = View.GONE
+            deleteBtn.visibility = View.GONE
+            matchUserBtn.visibility = View.GONE
+            this.numberUser = 0
+        }
+    }
 
-    private fun load_list(n : Int) {
+    private fun prepareListFromAsset(n : Int) {
 
         startTimer()
         var folders = assets.list("EnrollBMPImages")?.toMutableList()
         //folders?.shuffle()
-        this.randomEnrollList = folders?.take(n)!!
-        this.compareList = assets.list("CompareBMPImages")?.toList()!!
+        this.randomEnrollList = folders?.take(n)!!.sorted()
+        this.compareList = assets.list("CompareBMPImages")?.toList()!!.sorted()
+        log("Loading list: ${endTimer()}s")
+    }
+
+    private fun prepareListFromSdcard(n : Int) {
+
+        startTimer()
+        var file = File(getStoragePath() + "EnrollBMPImages")
+        var folders = file.list()
+        //folders?.shuffle()
+        this.randomEnrollList = folders.take(n).sorted()
+        this.compareList = File(getStoragePath() + "CompareBMPImages").list().toList().sorted()
         log("Loading list: ${endTimer()}s")
     }
 
@@ -83,15 +110,17 @@ class DatabaseActivity : AppCompatActivity() {
             var compareFPRecord = Array<FingerprintRecord?>(10) { null }
             var i = 0
             for ((key,fp) in fpMapping){
+                val fpPath = "CompareBMPImages/${id}/${key}"
+                var fpBmp = if (READFROMSDCARD) this.getBitmapFromSdcard(this, fpPath) else this.getBitmapFromAsset(this,fpPath)
                 compareFPRecord[i] = FingerprintRecord(
                     fp,
-                    this.getBitmapFromAsset(this, "CompareBMPImages/${id}/${key}")
+                    fpBmp
                 )
                 i += 1
             }
             compareFPRecords += compareFPRecord
-
-            var faceBmp = this.getBitmapFromAsset(this, "CompareBMPImages/${id}/face.jpg")
+            var facePath = "CompareBMPImages/${id}/face.jpg"
+            var faceBmp = if (READFROMSDCARD) this.getBitmapFromSdcard(this, facePath) else this.getBitmapFromAsset(this, facePath)
             compareFaceRecords += FaceRecord(faceBmp)
         }
         val duration = endTimer()
@@ -103,18 +132,21 @@ class DatabaseActivity : AppCompatActivity() {
         enrollFaceRecords = arrayOf()
         startTimer()
         for (id in this.randomEnrollList){
+
             var enrollFPRecord = Array<FingerprintRecord?>(10) { null }
             var i = 0
             for ((key,fp) in fpMapping){
+                var fpPath = "EnrollBMPImages/${id}/${key}"
+                var fpBmp = if (READFROMSDCARD) this.getBitmapFromSdcard(this, fpPath) else this.getBitmapFromAsset(this, fpPath)
                 enrollFPRecord[i] = FingerprintRecord(
                     fp,
-                    this.getBitmapFromAsset(this, "EnrollBMPImages/${id}/${key}")
+                    fpBmp
                 )
                 i += 1
             }
             enrollFPRecords += enrollFPRecord
-
-            var faceBmp = this.getBitmapFromAsset(this, "EnrollBMPImages/${id}/face.jpg")
+            var facePath = "EnrollBMPImages/${id}/face.jpg"
+            var faceBmp = if (READFROMSDCARD) this.getBitmapFromSdcard(this, facePath) else this.getBitmapFromAsset(this, facePath)
             enrollFaceRecords += FaceRecord(faceBmp)
         }
         log("Loaded EnrollRecords: ${endTimer()}s")
@@ -124,20 +156,19 @@ class DatabaseActivity : AppCompatActivity() {
         users_edittext.setHint("1-${this.numberUser}")
 
         prepareBtn.setOnClickListener {
-
             var n: Int = 0
             if ((usersEditText!!.text.isNullOrBlank()) || (usersEditText!!.text.toString().toInt() > numberUser!!)){
                 return@setOnClickListener
             } else{
                 n = usersEditText!!.text.toString().toInt()
             }
+            if (READFROMSDCARD){this.prepareListFromSdcard(n) } else{ this.prepareListFromAsset(n) }
+            Logger.getLogger(DatabaseActivity::class.java.name).info(this.randomEnrollList.toString())
+            Logger.getLogger(DatabaseActivity::class.java.name).info(this.compareList.toString())
 
-            this.load_list(n)
-            startTimer()
             log("Preparing $n users")
             this.loadEnrollRecords()
             this.loadCompareRecords()
-            log("Prepared data: ${endTimer()}s")
             eachCounter = 0
         }
 
@@ -219,7 +250,6 @@ class DatabaseActivity : AppCompatActivity() {
             }
         }
 
-//
 //        readBtn.setOnClickListener {
 //            log("Reading user with ID $lastEnrolledID")
 //            App.BioManager!!.read(lastEnrolledID) { status, fpRecords, faceRecord, irisRecords ->
@@ -231,7 +261,6 @@ class DatabaseActivity : AppCompatActivity() {
 //        }
 //
 
-//
 //        verifyBtn.setOnClickListener {
 //            log("Verifying USER_ONE against user with ID $lastEnrolledID")
 //            App.BioManager!!.verify(1, compareFPRecords[USER_ONE], null, null)
@@ -253,10 +282,21 @@ class DatabaseActivity : AppCompatActivity() {
         }
     }
 
+    private fun getBitmapFromSdcard(context: Context, filePath: String?): Bitmap? {
+        var path = getStoragePath() + filePath!!
+        return try {
+//            var iS = FileInputStream(File(getStoragePath() + filePath!!))
+//            BitmapFactory.decodeStream(iS)
+            BitmapFactory.decodeFile(path)
+        } catch (ignore: IOException) {
+            Logger.getLogger(DatabaseActivity::class.java.name).info("$path :path not found")
+            null
+        }
+    }
+
     private fun getStoragePath() = SDCARD_PATH
 
     fun log(msg: String) = logBox.append("==> $msg\n")
-
 
     companion object{
         var startTime : Long? = null
