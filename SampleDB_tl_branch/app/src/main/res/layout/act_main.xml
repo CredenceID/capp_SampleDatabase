@@ -38,16 +38,6 @@
         android:textColor="@color/white_smoke"
         android:textSize="18sp" />
 
-    <Button
-        android:id="@+id/enrollOneBtn"
-        android:layout_width="250dp"
-        android:layout_height="35dp"
-        android:layout_marginTop="10dp"
-        android:background="@color/cid_blue_light"
-        android:text="Enroll one User"
-        android:textColor="@color/white_smoke"
-        android:textSize="18sp" />
-
 
     <Button
         android:id="@+id/enrollAllBtn"

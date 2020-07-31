@@ -73,14 +73,7 @@ class LaunchActivity : Activity() {
         return true
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String?>,
-        grantResults: IntArray
-    ) {
-        Log.i("TAG", grantResults[0].toString())
-        Log.i("TAG", permissions[0])
-        Log.i("TAG", requestCode.toString())
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String?>, grantResults: IntArray) {
 
         var allgranted = true
         for (result in grantResults) {
