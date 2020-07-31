@@ -19,8 +19,10 @@ import java.util.logging.Logger
 import java.util.Calendar
 private const val TAG = "DatabaseActivity"
 
-private const val USER_ONE = 0
-private const val USER_TWO = 1
+private val READFROMSDCARD = true
+private var SDCARD_PATH : String = ""
+
+
 
 class DatabaseActivity : AppCompatActivity() {
 
@@ -46,16 +48,14 @@ class DatabaseActivity : AppCompatActivity() {
     private var compareList : List<String> = listOf()
     private var usersEditText : EditText? = null
     private var numberUser : Int? = null
-    private val SDCARD_PATH : String = "${android.os.Environment.getExternalStorageDirectory()}/";
 
-    private val READFROMSDCARD = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.act_main)
         usersEditText = findViewById<EditText>(R.id.users_edittext)
-
+        SDCARD_PATH = "${android.os.Environment.getExternalStorageDirectory()}/";
         this.getTotalUser()
         this.configureLayoutComponents()
 
@@ -71,8 +71,9 @@ class DatabaseActivity : AppCompatActivity() {
                 var c = assets.list("CompareBMPImages")?.size
             }
             log("Data Found!")
-        } catch (ignore: IOException){
+        } catch (ignore: Exception){
             log("Data not found!")
+            prepareBtn.visibility = View.GONE
             enrollOneBtn.visibility = View.GONE
             enrollAllBtn.visibility = View.GONE
             deleteBtn.visibility = View.GONE
@@ -95,10 +96,9 @@ class DatabaseActivity : AppCompatActivity() {
 
         startTimer()
         var file = File(getStoragePath() + "EnrollBMPImages")
-        var folders = file.list()
-        //folders?.shuffle()
-        this.randomEnrollList = folders.take(n).sorted()
-        this.compareList = File(getStoragePath() + "CompareBMPImages").list().toList().sorted()
+        var folders = file.list().toList().map { it.toInt() }.sorted().map { it.toString() }
+        this.randomEnrollList = folders.take(n)
+        this.compareList = File(getStoragePath() + "CompareBMPImages").list().toList()
         log("Loading list: ${endTimer()}s")
     }
 
@@ -166,9 +166,9 @@ class DatabaseActivity : AppCompatActivity() {
             Logger.getLogger(DatabaseActivity::class.java.name).info(this.randomEnrollList.toString())
             Logger.getLogger(DatabaseActivity::class.java.name).info(this.compareList.toString())
 
-            log("Preparing $n users")
-            this.loadEnrollRecords()
-            this.loadCompareRecords()
+//            log("Preparing $n users")
+//            this.loadEnrollRecords()
+//            this.loadCompareRecords()
             eachCounter = 0
         }
 
@@ -190,9 +190,13 @@ class DatabaseActivity : AppCompatActivity() {
 
         enrollAllBtn.setOnClickListener {
 
-            var n = randomEnrollList.size
-            var eThread = enrollThread(n, logBox, randomEnrollList, enrollFPRecords,enrollFaceRecords)
+//            var n = randomEnrollList.size
+//            var eThread = enrollThread(n, logBox, randomEnrollList, enrollFPRecords,enrollFaceRecords)
+//            eThread.start()
+
+            var eThread = enrollThread2(this, logBox, randomEnrollList)
             eThread.start()
+
 //            var n = randomEnrollList.size
 //            startTimer()
 //            log("Enrolling $n users")
@@ -346,6 +350,83 @@ class DatabaseActivity : AppCompatActivity() {
                     eachCounter += 1
                 }
             }
+        }
+
+    }
+
+    class enrollThread2(context: Context, logBox: TextView,randomEnrollList: List<String>): Thread(){
+        private var fpMapping = mutableMapOf(
+            "LI" to Position.LEFT_INDEX,
+            "LL" to Position.LEFT_LITTLE,
+            "LM" to Position.LEFT_MIDDLE,
+            "LR" to Position.LEFT_RING,
+            "LT" to Position.LEFT_THUMB,
+            "RI" to Position.RIGHT_INDEX,
+            "RL" to Position.RIGHT_LITTLE,
+            "RM" to Position.RIGHT_MIDDLE,
+            "RR" to Position.RIGHT_RING,
+            "RT" to Position.RIGHT_THUMB)
+
+        var context = context
+        var logBox = logBox
+        var randomEnrollList = randomEnrollList
+        fun log(msg: String) = logBox.append("==> $msg\n")
+
+        override fun run(){
+            startTimer()
+            counter = eachCounter
+            while (eachCounter != randomEnrollList.size) {
+                if (doneEnroll){
+                    doneEnroll = false
+                    //init data
+                    var id = randomEnrollList[eachCounter].toInt()
+                    var enrollFPRecord = Array<FingerprintRecord?>(10) { null }
+                    var facePath = "EnrollBMPImages/${id}/face.jpg"
+                    var i = 0
+
+                    //Create FP record
+                    Logger.getLogger(DatabaseActivity::class.java.name).info("$id record is being created")
+                    for ((key,fp) in fpMapping){
+                        val fpPath = "EnrollBMPImages/${id}/${key}"
+                        val fpBmp = this.getBitmapFromSrc(context, fpPath)
+                        enrollFPRecord[i] = FingerprintRecord(fp, fpBmp)
+                        i += 1
+                    }
+
+                    //Create Face record
+                    var enrollFaceRecord = FaceRecord(getBitmapFromSrc(context, facePath))
+
+                    //Enroll record to biomanager
+                    Logger.getLogger(DatabaseActivity::class.java.name).info("$id is being enrolled")
+                    App.BioManager!!.enroll(
+                        id,
+                        enrollFPRecord,
+                        enrollFaceRecord,
+                        null
+                    ) { status, id ->
+                        log("[Status: $status, ID: $id]")
+                        counter = counter!!.inc()
+                        doneEnroll = true
+                        if (counter == randomEnrollList.size) {
+                            log("Enrolled to BioManager: ${endTimer()}s")
+                        }
+                    }
+                    eachCounter += 1
+                }
+            }
+        }
+        private fun getBitmapFromSrc(context: Context, filePath : String) : Bitmap?{
+            try {
+                if (READFROMSDCARD){
+                    return BitmapFactory.decodeFile(SDCARD_PATH + filePath!!)
+                }else{
+                    return BitmapFactory.decodeStream(context.assets.open(filePath!!))
+                }
+            } catch (ignore: IOException) {
+                Logger.getLogger(DatabaseActivity::class.java.name).info("FP not found")
+                return null
+            }
+
         }
 
     }
