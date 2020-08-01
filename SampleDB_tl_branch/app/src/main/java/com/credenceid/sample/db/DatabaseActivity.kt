@@ -12,9 +12,11 @@ import androidx.appcompat.app.AppCompatActivity
 import com.credenceid.database.FaceRecord
 import com.credenceid.database.FingerprintRecord
 import com.credenceid.database.FingerprintRecord.Position
+import com.opencsv.CSVWriter
 import kotlinx.android.synthetic.main.act_main.*
-import java.io.File
-import java.io.IOException
+import java.io.*
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.logging.Logger
 import java.util.Calendar
 private const val TAG = "DatabaseActivity"
@@ -25,18 +27,11 @@ private var SDCARD_PATH : String = ""
 
 
 class DatabaseActivity : AppCompatActivity() {
-
-    private var enrollFPRecords: Array<Array<FingerprintRecord?>> = arrayOf()
-    private var compareFPRecords: Array<Array<FingerprintRecord?>> = arrayOf()
-
-    private var enrollFaceRecords: Array<FaceRecord?> = arrayOf()
-    private var compareFaceRecords: Array<FaceRecord?> = arrayOf()
-
-
     private var randomEnrollList: List<String> = listOf()
     private var compareList : List<String> = listOf()
     private var usersEditText : EditText? = null
     private var numberUser : Int? = null
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,21 +97,6 @@ class DatabaseActivity : AppCompatActivity() {
             Logger.getLogger(DatabaseActivity::class.java.name).info(this.compareList.toString())
         }
 
-//        enrollOneBtn.setOnClickListener {
-//            startTimer()
-//            if (eachCounter != randomEnrollList.size) {
-//                App.BioManager!!.enroll(
-//                    randomEnrollList[eachCounter].toInt(),
-//                    enrollFPRecords[eachCounter],
-//                    enrollFaceRecords[eachCounter],
-//                    null
-//                ) { status, id ->
-//                    log("[Status: $status, ID: $id]")
-//                    log("Enrolled ${id} to BioManager: ${endTimer()}")
-//                }
-//                eachCounter += 1
-//            }
-//        }
 
         enrollAllBtn.setOnClickListener {
             var eThread = enrollThread(this, logBox, randomEnrollList)
@@ -194,6 +174,31 @@ class DatabaseActivity : AppCompatActivity() {
             endTime = Calendar.getInstance().timeInMillis
             return ((endTime!! - startTime!!)/1000).toInt()
         }
+
+        fun openCSV(fileName : String): BufferedWriter {
+            val filePath = SDCARD_PATH + fileName
+            val file = File(filePath)
+            if (file.exists()){
+                file.delete()
+            }
+            file.createNewFile()
+            Logger.getLogger(DatabaseActivity::class.java.name).info("Create file at: ${filePath}")
+
+
+            var fw = FileWriter(file.absoluteFile)
+            var bw = BufferedWriter(fw)
+            bw!!.write("\"ID\", Duration \n")
+            return bw
+        }
+        fun writeCSV(bw : BufferedWriter, id : Int, duration : Int){
+            bw.write("${id}, ${duration} \n")
+            bw.flush()
+        }
+        fun closeCSV(bw : BufferedWriter){
+            Logger.getLogger(DatabaseActivity::class.java.name).info("Close file")
+            Thread.sleep(1000)
+            bw.close()
+        }
     }
 
     class enrollThread(context: Context, logBox: TextView, randomEnrollList: List<String>): Thread(){
@@ -214,8 +219,11 @@ class DatabaseActivity : AppCompatActivity() {
         fun log(msg: String) = logBox.append("==> $msg\n")
         var thread_counter = 0
         var doneEnroll: Boolean = true
+
+        var bw :BufferedWriter? = null
+
         override fun run(){
-            startTimer()
+            bw = openCSV("Enroll.csv")
             while (thread_counter != randomEnrollList.size) {
                 if (doneEnroll){
                     doneEnroll = false
@@ -239,6 +247,7 @@ class DatabaseActivity : AppCompatActivity() {
 
                     //Enroll record to biomanager
                     Logger.getLogger(DatabaseActivity::class.java.name).info("$iD is being enrolled")
+                    startTimer()
                     App.BioManager!!.enroll(
                         iD,
                         enrollFPRecord,
@@ -248,12 +257,13 @@ class DatabaseActivity : AppCompatActivity() {
                         log("[Status: $status, ID: $id]")
                         thread_counter = thread_counter.inc()
                         doneEnroll = true
-                        if (thread_counter == randomEnrollList.size) {
-                            log("Enrolled to BioManager: ${endTimer()}s")
-                        }
+                        val duration = endTimer()
+                        log("Enrolled to BioManager: ${duration}s")
+                        writeCSV(bw!!, id, duration)
                     }
                 }
             }
+            closeCSV(bw!!)
         }
 
         private fun getBitmapFromSrc(context: Context, filePath : String) : Bitmap?{

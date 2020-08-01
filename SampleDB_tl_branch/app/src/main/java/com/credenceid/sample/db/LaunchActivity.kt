@@ -15,7 +15,7 @@ import com.credenceid.biometrics.Biometrics.ResultCode.*
 import com.credenceid.biometrics.BiometricsManager
 
 class LaunchActivity : Activity() {
-    private val REQUIRED_PERMISSIONS = arrayOf("android.permission.READ_EXTERNAL_STORAGE")
+    private val REQUIRED_PERMISSIONS = arrayOf("android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE")
     private val REQUEST_CODE_PERMISSIONS = 101
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -85,7 +85,6 @@ class LaunchActivity : Activity() {
             this.initBiometrics()
         } else {
             finish()
-
         }
     }
 }
