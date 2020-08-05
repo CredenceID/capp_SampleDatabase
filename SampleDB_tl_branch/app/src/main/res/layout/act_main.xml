@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_gravity="center"
@@ -19,54 +21,158 @@
         android:textColor="@color/black"
         android:textSize="16sp" />
 
-    <EditText
-        android:id="@+id/users_edittext"
-        android:layout_width="250dp"
-        android:layout_height="85dp"
-        android:ems="10"
-        android:inputType="numberSigned"
-        android:textAlignment="center"
-        android:textSize="35sp" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_gravity="center"
+        android:gravity="top">
 
-    <Button
-        android:id="@+id/prepareBtn"
-        android:layout_width="250dp"
-        android:layout_height="35dp"
-        android:layout_marginTop="10dp"
-        android:background="@color/cid_blue_light"
-        android:text="Prepare User"
-        android:textColor="@color/white_smoke"
-        android:textSize="18sp" />
+        <LinearLayout
+            android:layout_width="0px"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="top"
+            android:layout_weight="1">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="25dp"
+                android:layout_marginTop="10dp"
+                android:text="Number of Enroll"
+                android:textColor="@color/black"
+                android:textAlignment="center"
+                android:textSize="20sp" />
+
+            <EditText
+                android:id="@+id/enrollEditText"
+                android:layout_width="match_parent"
+                android:layout_height="85dp"
+                android:ems="10"
+                android:inputType="numberSigned"
+                android:textAlignment="center"
+                android:textSize="35sp" />
+
+            <Button
+                android:id="@+id/prepareBtn"
+                android:layout_width="match_parent"
+                android:layout_height="35dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:background="@color/cid_blue_light"
+                android:text="Prepare User"
+                android:textColor="@color/white_smoke"
+                android:textSize="18sp" />
+
+            <Button
+                android:id="@+id/enrollAllBtn"
+                android:layout_width="match_parent"
+                android:layout_height="35dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:background="@color/cid_blue_light"
+                android:text="Enroll all User"
+                android:textColor="@color/white_smoke"
+                android:textSize="18sp" />
+
+            <Button
+                android:id="@+id/matchBtn"
+                android:layout_width="match_parent"
+                android:layout_height="35dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:background="@color/cid_blue_light"
+                android:text="Match all user"
+                android:textColor="@color/white_smoke"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/deleteBtn"
+                android:layout_width="match_parent"
+                android:layout_height="35dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:background="@color/cid_blue_light"
+                android:text="Delete all enrolled user"
+                android:textColor="@color/white_smoke"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0px"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="top"
+            android:layout_weight="1">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="25dp"
+                android:layout_marginTop="10dp"
+                android:text="Number of Compare"
+                android:textColor="@color/black"
+                android:textAlignment="center"
+                android:textSize="20sp" />
+
+            <EditText
+                android:id="@+id/compareEditText"
+                android:layout_width="match_parent"
+                android:layout_height="85dp"
+                android:ems="10"
+                android:inputType="numberSigned"
+                android:textAlignment="center"
+                android:textSize="35sp" />
+
+            <Switch
+                android:id="@+id/fp_switch"
+                android:layout_width="match_parent"
+                android:layout_height="35dp"
+                android:layout_marginLeft="2dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginRight="2dp"
+                android:background="@color/cid_blue_light"
+                android:text="Fingerprint Data"
+                android:textAlignment="center"
+                android:textColor="@color/white_smoke"
+                android:textSize="20dp"
+                android:checked="true"/>
+
+            <Switch
+                android:id="@+id/face_switch"
+                android:layout_width="match_parent"
+                android:layout_height="35dp"
+                android:layout_marginLeft="2dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginRight="2dp"
+                android:background="@color/cid_blue_light"
+                android:text="Face Data"
+                android:textAlignment="center"
+                android:textColor="@color/white_smoke"
+                android:textSize="20dp"
+                android:checked="true"/>
+            <Switch
+                android:id="@+id/shuffle_switch"
+                android:layout_width="match_parent"
+                android:layout_height="35dp"
+                android:layout_marginLeft="2dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginRight="2dp"
+                android:background="@color/cid_blue_light"
+                android:text="Randomize data"
+                android:textAlignment="center"
+                android:textColor="@color/white_smoke"
+                android:textSize="20dp"
+                android:checked="false"/>
 
 
-    <Button
-        android:id="@+id/enrollAllBtn"
-        android:layout_width="250dp"
-        android:layout_height="35dp"
-        android:layout_marginTop="10dp"
-        android:background="@color/cid_blue_light"
-        android:text="Enroll all User"
-        android:textColor="@color/white_smoke"
-        android:textSize="18sp" />
 
-    <Button
-        android:id="@+id/matchUserBtn"
-        android:layout_width="250dp"
-        android:layout_height="35dp"
-        android:layout_marginTop="10dp"
-        android:background="@color/cid_blue_light"
-        android:text="Match all user"
-        android:textColor="@color/white_smoke"
-        android:textSize="14sp" />
 
-    <Button
-        android:id="@+id/deleteBtn"
-        android:layout_width="250dp"
-        android:layout_height="35dp"
-        android:layout_marginTop="10dp"
-        android:background="@color/cid_blue_light"
-        android:text="Delete all enrolled user"
-        android:textColor="@color/white_smoke"
-        android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+
 
 </LinearLayout>

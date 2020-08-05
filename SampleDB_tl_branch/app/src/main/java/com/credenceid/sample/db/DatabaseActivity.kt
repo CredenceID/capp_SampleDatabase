@@ -12,11 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.credenceid.database.FaceRecord
 import com.credenceid.database.FingerprintRecord
 import com.credenceid.database.FingerprintRecord.Position
-import com.opencsv.CSVWriter
 import kotlinx.android.synthetic.main.act_main.*
 import java.io.*
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.logging.Logger
 import java.util.Calendar
 private const val TAG = "DatabaseActivity"
@@ -27,10 +24,13 @@ private var SDCARD_PATH : String = ""
 
 
 class DatabaseActivity : AppCompatActivity() {
-    private var randomEnrollList: List<String> = listOf()
+    private var enrollList: List<String> = listOf()
     private var compareList : List<String> = listOf()
-    private var usersEditText : EditText? = null
-    private var numberUser : Int? = null
+    private var enrollEditText : EditText? = null
+    private var compareEditText: EditText? = null
+    private var numberCompareUser : Int? = 0
+    private var numberEnrollUser : Int? = 0
+
 
 
 
@@ -38,7 +38,8 @@ class DatabaseActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.act_main)
-        usersEditText = findViewById<EditText>(R.id.users_edittext)
+        enrollEditText = findViewById<EditText>(R.id.enrollEditText)
+        compareEditText = findViewById<EditText>(R.id.compareEditText)
         SDCARD_PATH = "${android.os.Environment.getExternalStorageDirectory()}/";
         this.getTotalUser()
         this.configureLayoutComponents()
@@ -48,11 +49,11 @@ class DatabaseActivity : AppCompatActivity() {
     private fun getTotalUser() {
         try {
             if (READFROMSDCARD) {
-                this.numberUser = File(getStoragePath() + "EnrollBMPImages").list().size
-                var c = File(getStoragePath() + "CompareBMPImages").list().size
+                this.numberEnrollUser = File(getStoragePath() + "EnrollBMPImages").list().size
+                this.numberCompareUser = File(getStoragePath() + "CompareBMPImages").list().size
             } else {
-                this.numberUser = assets.list("EnrollBMPImages")?.size
-                var c = assets.list("CompareBMPImages")?.size
+                this.numberEnrollUser = assets.list("EnrollBMPImages")?.size
+                this.numberCompareUser = assets.list("CompareBMPImages")?.size
             }
             log("Data Found!")
         } catch (ignore: Exception){
@@ -60,83 +61,72 @@ class DatabaseActivity : AppCompatActivity() {
             prepareBtn.visibility = View.GONE
             enrollAllBtn.visibility = View.GONE
             deleteBtn.visibility = View.GONE
-            matchUserBtn.visibility = View.GONE
-            this.numberUser = 0
+            matchBtn.visibility = View.GONE
         }
     }
 
-    private fun prepareList(n : Int){
+    private fun prepareList(enrolled : Int, compared : Int){
         startTimer()
         if (READFROMSDCARD){
-            var file = File(getStoragePath() + "EnrollBMPImages")
-            var folders = file.list().toList().map { it.toInt() }.sorted().map { it.toString() }
-            this.randomEnrollList = folders.take(n)
-            this.compareList = File(getStoragePath() + "CompareBMPImages").list().toList()
+            var enrollFileName = File(getStoragePath() + "EnrollBMPImages").list().toList().map { it.toInt() }.sorted().map { it.toString() }
+            var compareFileName = File(getStoragePath() + "CompareBMPImages").list().toList().map { it.toInt() }.sorted().map { it.toString() }
+            if (shuffle_switch.isChecked){
+                enrollFileName = enrollFileName.shuffled()
+                compareFileName = compareFileName.shuffled()
+            }
+            this.enrollList = enrollFileName.take(enrolled)
+            this.compareList = compareFileName.take(compared)
         }else{
-            var folders = assets.list("EnrollBMPImages")!!.toList().map { it.toInt() }.sorted().map { it.toString() }
+            //is not updated.. Don't use
+            var folders = assets.list("EnrollBMPImages")!!.toList().map { it.toInt() }.sorted().map { it.toString() }.take(compared)
             //folders?.shuffle()
-            this.randomEnrollList = folders.take(n)
-            this.compareList = assets.list("CompareBMPImages")?.toList()!!
+            this.enrollList = folders.take(enrolled)
+            this.compareList = assets.list("CompareBMPImages")?.toList()!!.take(compared)
         }
         log("Loading list: ${endTimer()}s")
 
     }
 
     private fun configureLayoutComponents() {
-        users_edittext.setHint("1-${this.numberUser}")
+        enrollEditText!!.setHint("1-${this.numberEnrollUser}")
+        compareEditText!!.setHint("1-${this.numberCompareUser}")
 
         prepareBtn.setOnClickListener {
-            var n: Int = 0
-            if ((usersEditText!!.text.isNullOrBlank()) || (usersEditText!!.text.toString().toInt() > numberUser!!)){
+            var enrolled: Int
+            var compared: Int
+
+            if ((enrollEditText!!.text.isNullOrBlank()) || (enrollEditText!!.text.toString().toInt() > numberEnrollUser!!) || (compareEditText!!.text.isNullOrBlank()) || (compareEditText!!.text.toString().toInt() > numberCompareUser!!) ){
+                log("Wrong Input")
                 return@setOnClickListener
             } else{
-                n = usersEditText!!.text.toString().toInt()
+                enrolled = enrollEditText!!.text.toString().toInt()
+                compared = compareEditText!!.text.toString().toInt()
             }
-            this.prepareList(n)
-            Logger.getLogger(DatabaseActivity::class.java.name).info(this.randomEnrollList.toString())
+            this.prepareList(enrolled, compared)
+            Logger.getLogger(DatabaseActivity::class.java.name).info(this.enrollList.toString())
             Logger.getLogger(DatabaseActivity::class.java.name).info(this.compareList.toString())
         }
 
 
         enrollAllBtn.setOnClickListener {
-            var eThread = enrollThread(this, logBox, randomEnrollList)
+            var eThread = enrollThread(this, logBox, enrollList, fp_switch.isChecked, face_switch.isChecked)
             eThread.start()
         }
 
-//        matchUserBtn.setOnClickListener {
-//            log("Matching all ${compareList.size} compareList against DB.")
-//            startTimer()
-//            counter = 0
-//
-//            for ((i,compareFPRecord) in compareFPRecords.withIndex()) {
-//                App.BioManager!!.match(
-//                    compareFPRecord,
-//                    compareFaceRecords[i],
-//                    null
-//                ) { status, arrayList ->
-//                    log("[Status: $status, Match Count: ${arrayList?.size}]")
-//
-//                    if (null == arrayList) return@match
-//                    for (item in arrayList) {
-//                        log(
-//                            "[FP: ${item.fingerprintScore}," +
-//                                    "Face: ${item.faceScore}, Iris: ${item.irisScore}]"
-//                        )
-//                    }
-//                    counter = counter!!.inc()
-//                    if (counter == compareFPRecords.size){
-//                        log("Enrolling to BioManager: ${endTimer()}s")
-//                    }
-//                }
-//            }
-//        }
+        matchBtn.setOnClickListener {
+            var mThread = matchThread(this, logBox, compareList, fp_switch.isChecked, face_switch.isChecked)
+            mThread.start()
+        }
+
 
         deleteBtn.setOnClickListener {
-            log("Deleting all enrolled user")
-            for (id in compareList) {
-                App.BioManager!!.delete(id.toInt()){status -> log("[Status: $status]") }
-            }
+            log("Not function implemented")
         }
+//            log("Deleting all enrolled user")
+//            for (id in compareList) {
+//                App.BioManager!!.delete(id.toInt()){status -> log("[Status: $status]") }
+//            }
+//        }
 
 //        readBtn.setOnClickListener {
 //            log("Reading user with ID $lastEnrolledID")
@@ -167,6 +157,17 @@ class DatabaseActivity : AppCompatActivity() {
     companion object{
         var startTime : Long? = null
         var endTime : Long? = null
+        var fpMapping = mutableMapOf(
+            "LI" to Position.LEFT_INDEX,
+            "LL" to Position.LEFT_LITTLE,
+            "LM" to Position.LEFT_MIDDLE,
+            "LR" to Position.LEFT_RING,
+            "LT" to Position.LEFT_THUMB,
+            "RI" to Position.RIGHT_INDEX,
+            "RL" to Position.RIGHT_LITTLE,
+            "RM" to Position.RIGHT_MIDDLE,
+            "RR" to Position.RIGHT_RING,
+            "RT" to Position.RIGHT_THUMB)
         fun startTimer(){
             startTime = Calendar.getInstance().timeInMillis
         }
@@ -201,33 +202,29 @@ class DatabaseActivity : AppCompatActivity() {
         }
     }
 
-    class enrollThread(context: Context, logBox: TextView, randomEnrollList: List<String>): Thread(){
-        var fpMapping = mutableMapOf(
-            "LI" to Position.LEFT_INDEX,
-            "LL" to Position.LEFT_LITTLE,
-            "LM" to Position.LEFT_MIDDLE,
-            "LR" to Position.LEFT_RING,
-            "LT" to Position.LEFT_THUMB,
-            "RI" to Position.RIGHT_INDEX,
-            "RL" to Position.RIGHT_LITTLE,
-            "RM" to Position.RIGHT_MIDDLE,
-            "RR" to Position.RIGHT_RING,
-            "RT" to Position.RIGHT_THUMB)
+    class enrollThread(context: Context, logBox: TextView, randomEnrollList: List<String>, fpSwitch : Boolean, faceSwitch : Boolean): Thread(){
+
         var context = context
         var logBox = logBox //unsafe reference to view
         var randomEnrollList = randomEnrollList
         fun log(msg: String) = logBox.append("==> $msg\n")
         var thread_counter = 0
         var doneEnroll: Boolean = true
+        var fpSwitch = fpSwitch
+        var faceSwitch = faceSwitch
 
         var bw :BufferedWriter? = null
 
         override fun run(){
             bw = openCSV("Enroll.csv")
-            while (thread_counter != randomEnrollList.size) {
+            log("Start Enroll")
+            while (thread_counter < randomEnrollList.size) {
                 if (doneEnroll){
                     doneEnroll = false
                     //init data
+                    if (thread_counter >= randomEnrollList.size) {
+                        break
+                    }
                     var iD = randomEnrollList[thread_counter].toInt()
                     var enrollFPRecord = Array<FingerprintRecord?>(10) { null }
                     var facePath = "EnrollBMPImages/${iD}/face.jpg"
@@ -235,16 +232,19 @@ class DatabaseActivity : AppCompatActivity() {
 
                     //Create FP record
                     Logger.getLogger(DatabaseActivity::class.java.name).info("$iD record is being created")
-                    for ((key,fp) in fpMapping){
-                        val fpPath = "EnrollBMPImages/${iD}/${key}"
-                        val fpBmp = this.getBitmapFromSrc(context, fpPath)
-                        enrollFPRecord[i] = FingerprintRecord(fp, fpBmp)
-                        i += 1
+                    if (fpSwitch) {
+                        for ((key, fp) in fpMapping) {
+                            val fpPath = "EnrollBMPImages/${iD}/${key}"
+                            val fpBmp = this.getBitmapFromSrc(context, fpPath)
+                            enrollFPRecord[i] = FingerprintRecord(fp, fpBmp)
+                            i += 1
+                        }
                     }
-
+                    var enrollFaceRecord : FaceRecord? = null
                     //Create Face record
-                    var enrollFaceRecord = FaceRecord(getBitmapFromSrc(context, facePath))
-
+                    if (faceSwitch) {
+                        enrollFaceRecord = FaceRecord(getBitmapFromSrc(context, facePath))
+                    }
                     //Enroll record to biomanager
                     Logger.getLogger(DatabaseActivity::class.java.name).info("$iD is being enrolled")
                     startTimer()
@@ -264,6 +264,7 @@ class DatabaseActivity : AppCompatActivity() {
                 }
             }
             closeCSV(bw!!)
+            log("Finished enroll")
         }
 
         private fun getBitmapFromSrc(context: Context, filePath : String) : Bitmap?{
@@ -279,5 +280,92 @@ class DatabaseActivity : AppCompatActivity() {
             }
         }
     }
+
+    class matchThread(context: Context, logBox: TextView, compareList: List<String>, fpSwitch: Boolean, faceSwitch: Boolean): Thread(){
+
+        var context = context
+        var logBox = logBox //unsafe reference to view
+        var compareList = compareList
+        fun log(msg: String) = logBox.append("==> $msg\n")
+        var thread_counter = 0
+        var doneEnroll: Boolean = true
+        var fpSwitch = fpSwitch
+        var faceSwitch = faceSwitch
+
+        var bw :BufferedWriter? = null
+
+        override fun run(){
+            bw = openCSV("match.csv")
+            log("Start match")
+            while (thread_counter != compareList.size) {
+                if (doneEnroll){
+                    doneEnroll = false
+                    //init data
+                    if (thread_counter >= compareList.size) {
+                        break
+                    }
+                    var iD = compareList[thread_counter].toInt()
+                    var compareFPRecord = Array<FingerprintRecord?>(10) { null }
+                    var facePath = "CompareBMPImages/${iD}/face.jpg"
+                    var i = 0
+
+                    //Create FP record
+                    Logger.getLogger(DatabaseActivity::class.java.name).info("$iD record is being created")
+                    if (fpSwitch) {
+                        for ((key, fp) in fpMapping) {
+                            val fpPath = "CompareBMPImages/${iD}/${key}"
+                            val fpBmp = this.getBitmapFromSrc(context, fpPath)
+                            compareFPRecord[i] = FingerprintRecord(fp, fpBmp)
+                            i += 1
+                        }
+                    }
+
+                    //Create Face record
+                    var compareFaceRecord : FaceRecord? = null
+                    if (faceSwitch){
+                        compareFaceRecord = FaceRecord(getBitmapFromSrc(context, facePath))
+                    }
+
+                    //Enroll record to biomanager
+                    Logger.getLogger(DatabaseActivity::class.java.name).info("$iD is being matched")
+                    startTimer()
+                    App.BioManager!!.match(
+                        compareFPRecord,
+                        compareFaceRecord,
+                        null
+                    ) { status, arrayList ->
+                        log("[Status: $status, Match Count: ${arrayList?.size}]")
+
+                        thread_counter = thread_counter.inc()
+                        doneEnroll = true
+                        val duration = endTimer()
+                        writeCSV(bw!!, iD, duration)
+                        log("Match to BioManager: ${duration}s")
+
+                        if (null == arrayList) return@match
+                        for (item in arrayList) {
+                            log("[FP: ${item.fingerprintScore}," + "Face: ${item.faceScore}, Iris: ${item.irisScore}]")
+                        }
+                    }
+                }
+            }
+            closeCSV(bw!!)
+            log("Finished match")
+        }
+
+        private fun getBitmapFromSrc(context: Context, filePath : String) : Bitmap?{
+            try {
+                if (READFROMSDCARD){
+                    return BitmapFactory.decodeFile(SDCARD_PATH + filePath)
+                }else{
+                    return BitmapFactory.decodeStream(context.assets.open(filePath))
+                }
+            } catch (ignore: IOException) {
+                Logger.getLogger(DatabaseActivity::class.java.name).info("FP not found")
+                return null
+            }
+        }
+    }
+
 }
 
