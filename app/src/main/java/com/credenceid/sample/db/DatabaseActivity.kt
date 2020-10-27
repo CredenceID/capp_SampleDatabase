@@ -220,14 +220,16 @@ class DatabaseActivity : AppCompatActivity() {
 
         enrollUserOneBtn.setOnClickListener {
             log("Enrolling user ONE.")
-            App.BioManager!!.enroll(-1, enrollFPRecords[USER_ONE], null, null) { status, id ->
+            val ID = (1..1000).random()
+            App.BioManager!!.enroll(ID, enrollFPRecords[USER_ONE], null, null) { status, id ->
                 log("[Status: $status, ID: $id]")
                 if (Status.SUCCESS == status) lastEnrolledID = id
             }
         }
         enrollUserTwoBtn.setOnClickListener {
             log("Enrolling user TWO.")
-            App.BioManager!!.enroll(-1, enrollFPRecords[USER_ONE], null, null) { status, id ->
+            val ID = (1..1000).random()
+            App.BioManager!!.enroll(ID, enrollFPRecords[USER_ONE], null, null) { status, id ->
                 log("[Status: $status, ID: $id]")
                 if (Status.SUCCESS == status) lastEnrolledID = id
             }
